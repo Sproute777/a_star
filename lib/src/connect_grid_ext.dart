@@ -1,7 +1,7 @@
 import 'package:a_star_algorithm/a_star_algorithm.dart';
 import 'models/tile.dart';
 
-extension ConnectGridExt on AStar {
+extension ConnectGridExt on TileGrid {
   /// Adds neighbors to cells
   void addNeighbors(List<List<Tile>> grid) {
     for (var row in grid) {

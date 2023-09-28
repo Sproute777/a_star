@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:a_star_algorithm/a_star_algorithm.dart';
 import 'package:a_star_algorithm/src/models/tile.dart';
 
-extension GreateGridWithBarrierExt on AStar {
+extension GreateGridWithBarrierExt on TileGrid{
   /// Method that create the grid using barriers
   List<List<Tile>> createGridWithBarriers() {
     List<List<Tile>> newGrid = [];

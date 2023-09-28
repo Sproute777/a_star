@@ -38,20 +38,20 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // benchmark timing
   AsyncTimeTracker? timeTracker;
-  int benchmark = 0;
 
   bool _showDoneList = true;
   bool _withDiagonals = true;
-  Point<int> start = Point<int>(0, 0);
+  AstarPoint start = WeightedPoint(0, 0);
   List<Tile> tiles = [];
-  List<Point<int>> barriers = [];
-  List<WeightedPoint> weighted = [
-    WeightedPoint(5, 5, weight: 5),
-    WeightedPoint(6, 5, weight: 5),
-    WeightedPoint(7, 5, weight: 5),
-    WeightedPoint(7, 6, weight: 5),
-    WeightedPoint(8, 5, weight: 5),
-  ];
+  final List<AstarPoint> points = [];
+  List<WeightedPoint> river = List.generate(
+    17,
+    (index) => WeightedPoint(8, index, weight: 5),
+  );
+ List<BarrierPoint> barriers = List.generate(
+    4,
+    (index) => BarrierPoint(index, 4),
+  );
   List<Point<int>> targets = [];
   int rows = 20;
   int columns = 20;
@@ -61,12 +61,13 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     List.generate(rows, (y) {
       List.generate(columns, (x) {
-        final point = Point(x, y);
+        final point = WeightedPoint(x, y);
         tiles.add(
           Tile(point),
         );
       });
     });
+    points..addAll(river)..addAll(barriers);
   }
 
   @override
@@ -155,7 +156,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ElevatedButton(
                   onPressed: () {
                     setState(() {
-                      barriers.clear();
+                      points.clear();
                       _cleanTiles();
                     });
                   },
@@ -191,26 +192,31 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _buildItem(Tile e) {
+    final index =
+        points.indexWhere((i) => i.x == e.position.x && i.y == e.position.y);
     Color color = Colors.white;
     String text = '1';
-    if (weighted.contains(e.position)) {
-      color = Colors.cyan;
-      text = weighted
-          .firstWhere((i) => i.x == e.position.x && i.y == e.position.y)
-          .weight
-          .toString();
+    if (index != -1) {
+      final point = points[index];
+      switch (point) {
+        case WeightedPoint(weight: 5):
+          text = '5';
+          color = Colors.blue[100]!;
+        case WeightedPoint():
+        case StopPoint():
+          text = '${point.weight}';
+        case BarrierPoint():
+          text = 'barrier';
+          color = Colors.red;
+      }
     }
-    if (barriers.contains(e.position)) {
-      color = Colors.red.withOpacity(.7);
-      text = 'barrier';
-    }
+
     if (e.done) {
       color = Colors.black.withOpacity(.2);
     }
     if (e.selected && _showDoneList) {
       color = Colors.green.withOpacity(.7);
     }
-
     if (targets.contains(e.position)) {
       color = Colors.purple.withOpacity(.7);
       text = text + '\ntarget';
@@ -235,29 +241,49 @@ class _MyHomePageState extends State<MyHomePage> {
         onDoubleTap: () => _start(e.position),
         onTap: () {
           if (_typeInput == TypeInput.START_POINT) {
-            start = e.position;
+            start = WeightedPoint(e.position.x, e.position.y);
           }
 
           if (_typeInput == TypeInput.BARRIERS) {
-            if (barriers.contains(e.position)) {
-              barriers.remove(e.position);
-            } else {
-              barriers.add(e.position);
+            final pointIndex = points
+                .indexWhere((i) => i.x == e.position.x && i.y == e.position.y);
+            switch (pointIndex) {
+              case -1:
+                continue addBarrier;
+              case int():
+                final point = points[pointIndex];
+                if (point is BarrierPoint) {
+                  points.removeAt(pointIndex);
+                } else {
+                  continue addBarrier;
+                }
+              // it's not dead
+              addBarrier:
+              // ignore: dead_code
+              default:
+                points.add(BarrierPoint(e.position.x, e.position.y));
             }
           }
-          if (_typeInput == TypeInput.TARGETS) {
-            if (targets.contains(e.position)) {
-              targets.remove(e.position);
-            } else {
-              targets.add(e.position);
-            }
-          }
+
           if (_typeInput == TypeInput.WATER) {
-            if (weighted.contains(e.position)) {
-              weighted.remove(e.position);
-            } else {
-              weighted
-                  .add(WeightedPoint(e.position.x, e.position.y, weight: 5));
+            final pointIndex = points
+                .indexWhere((i) => i.x == e.position.x && i.y == e.position.y);
+            switch (pointIndex) {
+              case -1:
+                continue addWater;
+              case int():
+                final point = points[pointIndex];
+                if (point case WeightedPoint(weight: 5)) {
+                  points.removeAt(pointIndex);
+                } else {
+                  continue addWater;
+                }
+              // it's not dead
+              addWater:
+              // ignore: dead_code
+              default:
+                points
+                    .add(WeightedPoint(e.position.x, e.position.y, weight: 5));
             }
           }
           setState(() {});
@@ -292,22 +318,21 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _start(Point<int> target) {
+  void _start(AstarPoint target) {
     _cleanTiles();
     List<Point<int>> done = [];
     late Iterable<Point<int>> result;
 
     timeTracker = AsyncTimeTracker()
       ..track(() {
-        result = AStar(
-          rows: rows,
-          columns: columns,
-          start: start,
-          end: target,
-          weighted: weighted,
-          withDiagonal: _withDiagonals,
-          barriers: [...barriers, ...targets],
-        ).findThePath(doneList: (doneList) {
+        result = TileGrid(
+                rows: rows,
+                columns: columns,
+                start: start,
+                end: target,
+                withDiagonal: _withDiagonals,
+                points: points)
+            .findThePath(doneList: (doneList) {
           done = doneList;
         });
       });
@@ -342,7 +367,7 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 class Tile {
-  final Point<int> position;
+  final AstarPoint position;
   bool selected = false;
   bool done = false;
 

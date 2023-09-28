@@ -1,362 +1,392 @@
-// import 'dart:math';
+import 'dart:math';
 
-// import 'package:a_star_algorithm/a_star_algorithm.dart';
-// import 'package:flutter/material.dart';
+import 'package:a_star_algorithm/a_star_algorithm.dart';
+import 'package:flutter/material.dart';
+import 'package:timing/timing.dart';
 
-// void main() {
-//   runApp(StepsAreaApp());
-// }
+void main() {
+  runApp(MyApp());
+}
 
-// class StepsAreaApp extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       title: 'Flutter Steps Area Demo',
-//       theme: ThemeData(
-//         primarySwatch: Colors.blue,
-//       ),
-//       home: MyHomePage(),
-//     );
-//   }
-// }
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: MyHomePage(),
+    );
+  }
+}
 
-// enum TypeInput {
-//   START_POINT,
-//   END_POINT,
-//   BARRIERS,
-//   TARGETS,
-//   WATER,
-//   STEPS,
-//   FOUNDED_TARGET,
-//   TARGETS_STEPS,
-// }
+enum TypeInput {
+  START_POINT,
+  BARRIERS,
+  TARGETS,
+  WATER,
+}
 
-// class MyHomePage extends StatefulWidget {
-//   @override
-//   _MyHomePageState createState() => _MyHomePageState();
-// }
+class MyHomePage extends StatefulWidget {
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
 
-// class _MyHomePageState extends State<MyHomePage> {
-//   TypeInput _typeInput = TypeInput.START_POINT;
-//   int steps = 5;
-//   bool _showDoneList = true;
-//   final List<AstarPoint> points = [];
-//   // sealed
-//   AstarPoint start = WeightedPoint(0, 0);
-//   AstarPoint end = WeightedPoint(0, 0);
-//   List<Tile> tiles = [];
-//   // List<WeightedPoint> weighted = [];
-//   // List<Point<int>> targets = [];
+class _MyHomePageState extends State<MyHomePage> {
+  TypeInput _typeInput = TypeInput.START_POINT;
 
-//   /// turn based area
-//   List<Point<int>> stepsArea = [];
-//   List<Point<int>> foundedEnemies = [];
-//   int rows = 20;
-//   int columns = 20;
+  // benchmark timing
+  AsyncTimeTracker? _timeTracker;
+  int _steps = 5;
+    List<Point<int>> _stepsArea = [];
 
-//   @override
-//   void initState() {
-//     super.initState();
-//     List.generate(rows, (y) {
-//       List.generate(columns, (x) {
-//         final point = Point(x, y);
-//         tiles.add(
-//           Tile(point),
-//         );
-//       });
-//     });
-//   }
+  bool _showDoneList = true;
+  bool _withDiagonals = true;
+  AstarPoint start = WeightedPoint(0, 0);
+  List<Tile> tiles = [];
+  final List<AstarPoint> points = [];
+  List<WeightedPoint> river = List.generate(
+    17,
+    (index) => WeightedPoint(8, index, weight: 5),
+  );
+  List<BarrierPoint> barriers = List.generate(
+    4,
+    (index) => BarrierPoint(index, 4),
+  );
+  List<Point<int>> targets = [];
+  int rows = 20;
+  int columns = 20;
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: Text('A* tbs'),
-//       ),
-//       body: Column(
-//         mainAxisSize: MainAxisSize.min,
-//         crossAxisAlignment: CrossAxisAlignment.start,
-//         children: [
-//           Padding(
-//             padding: const EdgeInsets.all(20.0),
-//             child: Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 ElevatedButton(
-//                   onPressed: () {
-//                     setState(() {
-//                       _typeInput = TypeInput.START_POINT;
-//                     });
-//                   },
-//                   style: ButtonStyle(
-//                     backgroundColor: _getColorSelected(TypeInput.START_POINT),
-//                   ),
-//                   child: Text('START'),
-//                 ),
-//                 Column(
-//                   children: [
-//                     Text('steps $steps'.toUpperCase()),
-//                     Row(
-//                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                       children: [
-//                         IconButton(
-//                           icon: Icon(Icons.add),
-//                           onPressed: () {
-//                             setState(() {
-//                               steps += 1;
-//                             });
-//                           },
-//                           style: ButtonStyle(
-//                             backgroundColor: _getColorSelected(TypeInput.WATER),
-//                           ),
-//                         ),
-//                         SizedBox(width: 10),
-//                         IconButton(
-//                           icon: Icon(Icons.remove),
-//                           onPressed: () {
-//                             if (steps > 0)
-//                               setState(() {
-//                                 steps -= 1;
-//                               });
-//                           },
-//                           style: ButtonStyle(
-//                             backgroundColor: _getColorSelected(TypeInput.WATER),
-//                           ),
-//                         ),
-//                       ],
-//                     ),
-//                   ],
-//                 ),
-//                 ElevatedButton(
-//                   onPressed: () {
-//                     setState(() {
-//                       _typeInput = TypeInput.WATER;
-//                     });
-//                   },
-//                   style: ButtonStyle(
-//                     backgroundColor: _getColorSelected(TypeInput.WATER),
-//                   ),
-//                   child: Text('WATER'),
-//                 ),
-//                 ElevatedButton(
-//                   onPressed: () {
-//                     setState(() {
-//                       _typeInput = TypeInput.BARRIERS;
-//                     });
-//                   },
-//                   style: ButtonStyle(
-//                     backgroundColor: _getColorSelected(TypeInput.BARRIERS),
-//                   ),
-//                   child: Text('BARRIES'),
-//                 ),
-//                 ElevatedButton(
-//                   onPressed: () {
-//                     setState(() {
-//                       _typeInput = TypeInput.TARGETS;
-//                     });
-//                   },
-//                   style: ButtonStyle(
-//                     backgroundColor: _getColorSelected(TypeInput.TARGETS),
-//                   ),
-//                   child: Text('TARGETS'),
-//                 ),
-//                 ElevatedButton(
-//                   onPressed: () {
-//                     setState(() {
-//                       barriers.clear();
-//                       _cleanTiles();
-//                     });
-//                   },
-//                   child: Text('CLEAN'),
-//                 )
-//               ],
-//             ),
-//           ),
-//           Expanded(
-//             child: GridView.count(
-//               crossAxisCount: columns,
-//               children: tiles.map((e) {
-//                 return _buildItem(e);
-//               }).toList(),
-//             ),
-//           ),
-//           Row(
-//             children: [
-//               Switch(
-//                 value: _showDoneList,
-//                 onChanged: (value) {
-//                   setState(() {
-//                     _showDoneList = value;
-//                   });
-//                 },
-//               ),
-//               Text('Show done list')
-//             ],
-//           ),
-//         ],
-//       ),
-//       floatingActionButton: FloatingActionButton(
-//         onPressed: _start,
-//         tooltip: 'Find path',
-//         child: Icon(Icons.map),
-//       ), // This trailing comma makes auto-formatting nicer for build methods.
-//     );
-//   }
+  @override
+  void initState() {
+    super.initState();
+    List.generate(rows, (y) {
+      List.generate(columns, (x) {
+        final point = WeightedPoint(x, y);
+        tiles.add(
+          Tile(point),
+        );
+      });
+    });
+    points
+      ..addAll(river)
+      ..addAll(barriers);
+  }
 
-//   Widget _buildItem(Tile e) {
-//     Color color = Colors.white;
-//     String text = '1';
-//     IconData? icon;
-//     if (weighted.contains(e.position)) {
-//       color = Colors.cyan.withOpacity(0.5);
-//       text = weighted
-//           .firstWhere((i) => i.x == e.position.x && i.y == e.position.y)
-//           .weight
-//           .toString();
-//       icon = Icons.water;
-//     }
-//     if (barriers.contains(e.position)) {
-//       color = Colors.red;
-//       icon = Icons.do_not_step_outlined;
-//     }
-//     if (e.done) {
-//       color = Colors.black;
-//     }
-//     if (e.selected && _showDoneList) {
-//       color = Colors.green;
-//     }
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('A* double tap to find path'),
+      ),
+      floatingActionButton: FloatingActionButton(onPressed: ()=> _start(start),child: Icon(Icons.add),),
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 40,
+            child: Row(
+              children: [
+                if (_showDoneList)
+                  Text(
+                    'done list ${tiles.where((i) => i.done).length},\npath length ${tiles.where((i) => i.selected).length} ${_getBenchmark()}',
+                  )
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              Text('with diagonals'),
+              Switch(
+                value: _withDiagonals,
+                onChanged: (value) {
+                  setState(() {
+                    _withDiagonals = value;
+                  });
+                },
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _typeInput = TypeInput.START_POINT;
+                    });
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: _getColorSelected(TypeInput.START_POINT),
+                  ),
+                  child: Text('START'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _typeInput = TypeInput.WATER;
+                    });
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: _getColorSelected(TypeInput.WATER),
+                  ),
+                  child: Text('WATER'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _typeInput = TypeInput.BARRIERS;
+                    });
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: _getColorSelected(TypeInput.BARRIERS),
+                  ),
+                  child: Text('BARRIES'),
+                ),
+                Column(
+                  children: [
+                    Text('steps $_steps'.toUpperCase()),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.add),
+                          onPressed: () {
+                            setState(() {
+                              _steps += 1;
+                            });
+                          },
+                          style: ButtonStyle(
+                            backgroundColor: _getColorSelected(TypeInput.WATER),
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        IconButton(
+                          icon: Icon(Icons.remove),
+                          onPressed: () {
+                            if (_steps > 0)
+                              setState(() {
+                                _steps -= 1;
+                              });
+                          },
+                          style: ButtonStyle(
+                            backgroundColor: _getColorSelected(TypeInput.WATER),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _typeInput = TypeInput.TARGETS;
+                    });
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: _getColorSelected(TypeInput.TARGETS),
+                  ),
+                  child: Text('TARGETS'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      points.clear();
+                      // _cleanTiles();
+                    });
+                  },
+                  child: Text('CLEAN'),
+                )
+              ],
+            ),
+          ),
+          Expanded(
+            child: GridView.count(
+              crossAxisCount: columns,
+              children: tiles.map((e) {
+                return _buildItem(e);
+              }).toList(),
+            ),
+          ),
+          Row(
+            children: [
+              Switch(
+                value: _showDoneList,
+                onChanged: (value) {
+                  setState(() {
+                    _showDoneList = value;
+                  });
+                },
+              ),
+              Text('Show done list')
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
-//     if (targets.contains(e.position)) {
-//       color = Colors.purple;
-//       icon = Icons.man;
-//     }
+  Widget _buildItem(Tile e) {
+    final index =
+        points.indexWhere((i) => i.x == e.position.x && i.y == e.position.y);
+    Color color = Colors.white;
+    String text = '1';
+    if (index != -1) {
+      final point = points[index];
+      switch (point) {
+        case WeightedPoint(weight: 5):
+          text = '5';
+          color = Colors.blue[100]!;
+        case WeightedPoint():
+        case StopPoint():
+          text = '${point.weight}';
+        case BarrierPoint():
+          text = 'barrier';
+          color = Colors.red;
+      }
+    }
 
-//     if (e.position == start) {
-//       color = Colors.black;
-//       icon = Icons.person;
-//     }
-//     if (e.position == end) {
-//       color = Colors.green;
-//       icon = Icons.flag;
-//     }
-//     if (stepsArea.contains(e.position)) {
-//       color = Colors.green;
-//     }
-//     if (targets.contains(e.position)) {
-//       color = Colors.purple;
-//     }
+    if (e.done) {
+      color = Colors.black.withOpacity(.2);
+    }
+    if (e.selected && _showDoneList) {
+      color = Colors.green[50]!;
+    }
+    if (targets.contains(e.position)) {
+      color = Colors.purple.withOpacity(.7);
+      text = text + '\ntarget';
+    }
 
-//     return Ink(
-//       decoration: BoxDecoration(
-//         border: Border.all(color: Colors.black54, width: 1.0),
-//         color: color.withOpacity(.3),
-//       ),
-//       height: 10,
-//       child: InkWell(
-//         child: Stack(
-//           children: [
-//             if (icon != null) Center(child: Icon(icon, color: color)),
-//             Text(
-//               text,
-//               style: TextStyle(fontSize: 9, color: Colors.black),
-//             ),
-//           ],
-//         ),
-//         onLongPress: () {},
-//         onDoubleTap: () {},
-//         onTap: () {
-//           if (_typeInput == TypeInput.START_POINT) {
-//             start = e.position;
-//           }
+    if (e.position == start) {
+      color = Colors.yellow.withOpacity(.7);
+      text = text + '\nstart';
+    }
 
-//           if (_typeInput == TypeInput.END_POINT) {
-//             end = e.position;
-//           }
+    if (_stepsArea.any((i)=> i.x ==e.position.x && i.y == e.position.y)) {
+      color = Colors.green;
+    }
 
-//           if (_typeInput == TypeInput.BARRIERS) {
-//             if (barriers.contains(e.position)) {
-//               barriers.remove(e.position);
-//             } else {
-//               barriers.add(e.position);
-//             }
-//           }
-//           if (_typeInput == TypeInput.TARGETS) {
-//             if (targets.contains(e.position)) {
-//               targets.remove(e.position);
-//             } else {
-//               targets.add(e.position);
-//             }
-//           }
-//           if (_typeInput == TypeInput.WATER) {
-//             if (weighted.contains(e.position)) {
-//               weighted.remove(e.position);
-//             } else {
-//               weighted
-//                   .add(WeightedPoint(e.position.x, e.position.y, weight: 7));
-//             }
-//           }
-//           setState(() {});
-//         },
-//       ),
-//     );
-//   }
+    return Ink(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.black54, width: 1.0),
+        color: color,
+      ),
+      height: 10,
+      child: InkWell(
+        child: Text(
+          text,
+          style: TextStyle(fontSize: 9, color: Colors.black),
+        ),
+        onTap: () {
+          if (_typeInput == TypeInput.START_POINT) {
+            start = WeightedPoint(e.position.x, e.position.y);
+          }
 
-//   MaterialStateProperty<Color> _getColorSelected(TypeInput input) {
-//     return MaterialStateProperty.all(
-//       _typeInput == input ? _getColorByType(input) : Colors.grey,
-//     );
-//   }
+          if (_typeInput == TypeInput.BARRIERS) {
+            final pointIndex = points
+                .indexWhere((i) => i.x == e.position.x && i.y == e.position.y);
+            switch (pointIndex) {
+              case -1:
+                continue addBarrier;
+              case int():
+                final point = points[pointIndex];
+                if (point is BarrierPoint) {
+                  points.removeAt(pointIndex);
+                } else {
+                  continue addBarrier;
+                }
+              // it's not dead
+              addBarrier:
+              // ignore: dead_code
+              default:
+                points.add(BarrierPoint(e.position.x, e.position.y));
+            }
+          }
 
-//   Color _getColorByType(TypeInput input) {
-//     switch (input) {
-//       case TypeInput.START_POINT:
-//         return Colors.yellow;
-//       case TypeInput.END_POINT:
-//         return Colors.green;
-//       case TypeInput.BARRIERS:
-//         return Colors.red;
-//       case TypeInput.TARGETS:
-//         return Colors.purple;
-//       case TypeInput.WATER:
-//         return Colors.blue;
-//       case TypeInput.STEPS:
-//         return Colors.blueGrey[700]!;
-//       case TypeInput.TARGETS_STEPS:
-//       case TypeInput.FOUNDED_TARGET:
-//         return Colors.deepPurple[700]!;
-//     }
-//   }
+          if (_typeInput == TypeInput.WATER) {
+            final pointIndex = points
+                .indexWhere((i) => i.x == e.position.x && i.y == e.position.y);
+            switch (pointIndex) {
+              case -1:
+                continue addWater;
+              case int():
+                final point = points[pointIndex];
+                if (point case WeightedPoint(weight: 5)) {
+                  points.removeAt(pointIndex);
+                } else {
+                  continue addWater;
+                }
+              // it's not dead
+              addWater:
+              // ignore: dead_code
+              default:
+                points
+                    .add(WeightedPoint(e.position.x, e.position.y, weight: 5));
+            }
+          }
+          setState(() {});
+        },
+      ),
+    );
+  }
 
-//   void _start() {
-//     _cleanTiles();
-//     final result = AStar(
-//       rows: rows,
-//       columns: columns,
-//       start: start,
-//       end: end,
-//       weighted: weighted,
-//       withDiagonal: false,
-//       barriers: [...barriers, ...targets],
-//     ).findSteps(steps: steps);
-//     print('Steps areas ${result}');
+  String _getBenchmark() {
+    if (_timeTracker == null) return '';
+    if (!_timeTracker!.isFinished) return '';
+    final duration = _timeTracker!.duration;
+    return 'benchmark: inMicro: ${duration.inMicroseconds} inMilli: ${duration.inMilliseconds}';
+  }
 
-//     setState(() {
-//       stepsArea = List.of(result);
-//     });
-//   }
+  MaterialStateProperty<Color> _getColorSelected(TypeInput input) {
+    return MaterialStateProperty.all(
+      _typeInput == input ? _getColorByType(input) : Colors.grey,
+    );
+  }
 
-//   void _cleanTiles() {
-//     for (var element in tiles) {
-//       element.selected = false;
-//       element.done = false;
-//     }
-//   }
-// }
+  Color _getColorByType(TypeInput input) {
+    switch (input) {
+      case TypeInput.START_POINT:
+        return Colors.yellow;
+      case TypeInput.BARRIERS:
+        return Colors.red;
+      case TypeInput.TARGETS:
+        return Colors.purple;
+      case TypeInput.WATER:
+        return Colors.blue;
+    }
+  }
 
-// class Tile {
-//   final Point<int> position;
-//   bool selected = false;
-//   bool done = false;
+  void _start(AstarPoint target) {
+    late Iterable<Point<int>> result;
 
-//   Tile(this.position);
-// }
+    _timeTracker = AsyncTimeTracker()
+      ..track(() {
+        result = TileGrid(
+                rows: rows,
+                columns: columns,
+                start: start,
+                end: target,
+                withDiagonal: _withDiagonals,
+                points: points)
+            .findSteps(steps: _steps);
+      });
+    setState(() {
+      _stepsArea = List.of(result);
+    });
+    }
+  }
+
+  
+
+
+class Tile {
+  final AstarPoint position;
+  bool selected = false;
+  bool done = false;
+
+  Tile(this.position);
+}

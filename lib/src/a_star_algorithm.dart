@@ -8,14 +8,12 @@ import 'package:a_star_algorithm/a_star_algorithm.dart';
 import 'models/tile.dart';
 
 /// Class responsible for calculating the best route using the A* algorithm.
-class AStar {
+class TileGrid {
   final int rows;
   final int columns;
   final AstarPoint start;
   final AstarPoint end;
   final List<AstarPoint> points;
-  // final List<Point<int>> barriers;
-  // final List<WeightedPoint> weighted;
 
   final bool withDiagonal;
   final List<Tile> _doneList = [];
@@ -23,7 +21,7 @@ class AStar {
 
   late List<List<Tile>> grid;
 
-  AStar({
+  TileGrid({
     required this.rows,
     required this.columns,
     required this.start,
