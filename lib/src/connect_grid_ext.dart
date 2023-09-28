@@ -12,8 +12,8 @@ extension ConnectGridExt on AStar {
   }
 
   void _chainNeigbors(Tile tile, List<List<Tile>> grid) {
-    int x = tile.position.x;
-    int y = tile.position.y;
+    int x = tile.point.x;
+    int y = tile.point.y;
 
     /// adds in top
     if (y > 0) {

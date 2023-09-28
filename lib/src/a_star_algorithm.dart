@@ -11,10 +11,11 @@ import 'models/tile.dart';
 class AStar {
   final int rows;
   final int columns;
-  final Point<int> start;
-  final Point<int> end;
-  final List<Point<int>> barriers;
-  final List<WeightedPoint> weighted;
+  final AstarPoint start;
+  final AstarPoint end;
+  final List<AstarPoint> points;
+  // final List<Point<int>> barriers;
+  // final List<WeightedPoint> weighted;
 
   final bool withDiagonal;
   final List<Tile> _doneList = [];
@@ -27,37 +28,37 @@ class AStar {
     required this.columns,
     required this.start,
     required this.end,
-    required this.barriers,
-    this.weighted = const [],
+    // required this.barriers,
+    required this.points,
+    // this.weighted = const [],
     this.withDiagonal = false,
   }) {
     grid = createGridWithBarriers();
   }
 
-  AStar.byFreeSpaces({
-    required this.rows,
-    required this.columns,
-    required this.start,
-    required this.end,
-    required List<Point<int>> freeSpaces,
-    this.weighted = const [],
-    this.withDiagonal = true,
-  }) : barriers = [] {
-    grid = createGridWithFree(freeSpaces);
-  }
+  // AStar.byFreeSpaces({
+  //   required this.rows,
+  //   required this.columns,
+  //   required this.start,
+  //   required this.end,
+  //   required List<Point<int>> freeSpaces,
+  //   required this.points,
+  //   // this.weighted = const [],
+  //   this.withDiagonal = true,
+  // })  {
+  //   grid = createGridWithFree(freeSpaces);
+  // }
 
   /// Method that starts the search
   Iterable<Point<int>> findThePath({ValueChanged<List<Point<int>>>? doneList}) {
     _doneList.clear();
     _waitList.clear();
-
-    if (barriers.contains(end)) {
+    Tile startTile = grid[start.x][start.y];
+    Tile endTile = grid[end.x][end.y];
+    if (endTile.point is BarrierPoint) {
       return [];
     }
 
-    Tile startTile = grid[start.x][start.y];
-
-    Tile endTile = grid[end.x][end.y];
     addNeighbors(grid);
     Tile? winner = _getTileWinner(
       startTile,
@@ -68,14 +69,14 @@ class AStar {
     if (winner?.parent != null) {
       Tile tileAux = winner!.parent!;
       for (int i = 0; i < winner.g - 1; i++) {
-        if (tileAux.position == start) {
+        if (tileAux.point == start) {
           break;
         }
-        path.add(tileAux.position);
+        path.add(tileAux.point);
         tileAux = tileAux.parent!;
       }
     }
-    doneList?.call(_doneList.map((e) => e.position).toList());
+    doneList?.call(_doneList.map((e) => e.point).toList());
 
     if (winner == null && !_isNeighbors(start, end)) {
       path.clear();
@@ -84,18 +85,19 @@ class AStar {
 
     return path.reversed;
   }
-  
 
   /// Method recursive that execute the A* algorithm
   Tile? _getTileWinner(Tile current, Tile end) {
     _waitList.remove(current);
     if (end == current) return current;
-    for (final n in current.neighbors) {
-      if (n.parent == null) {
-        _analiseDistance(n, end, parent: current);
-      }
-      if (!_doneList.contains(n)) {
-        _waitList.add(n);
+    if (!current.isStop) {
+      for (final n in current.neighbors) {
+        if (n.parent == null) {
+          _analiseDistance(n, end, parent: current);
+        }
+        if (!_doneList.contains(n)) {
+          _waitList.add(n);
+        }
       }
     }
     _doneList.add(current);
@@ -116,8 +118,8 @@ class AStar {
   /// Calculates the distance g and h
   void _analiseDistance(Tile current, Tile end, {required Tile parent}) {
     current.parent = parent;
-    current.g = parent.g + current.weight;
-    current.h = _distance(current.position, end.position);
+    current.g = parent.g + current.point.weight;
+    current.h = _distance(current.point, end.point);
   }
 
   /// Calculates the distance between two tiles.

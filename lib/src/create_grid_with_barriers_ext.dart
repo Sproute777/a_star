@@ -10,16 +10,12 @@ extension GreateGridWithBarrierExt on AStar {
     List.generate(columns, (x) {
       List<Tile> rowList = [];
       List.generate(rows, (y) {
-        final point = Point<int>(x, y);
-        final isBarrier = barriers.any((b) => b == point);
-        final costIndex = weighted.indexWhere((c) => c == point);
-        final type = isBarrier ? TileType.barrier : TileType.free;
+        final indexPoint = points.indexWhere((p)=> p.x == x && p.y == y);
+        final point = indexPoint == -1 ? WeightedPoint(x, y) : points[indexPoint];
         rowList.add(
           Tile(
             point,
             [],
-            weight: costIndex != -1 ? weighted[costIndex].weight : 1,
-            type: type,
           ),
         );
       });

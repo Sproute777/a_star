@@ -1,14 +1,10 @@
-import 'dart:math';
+import 'package:a_star_algorithm/a_star_algorithm.dart';
 
-/// Class used to represent each cell
-enum TileType { free, barrier, target }
 
 class Tile {
-  final Point<int> position;
+  final AstarPoint point;
   Tile? parent;
   final List<Tile> neighbors;
-  final TileType type;
-  final int weight;
 
   /// distanse from current to start
   int g = 0;
@@ -18,21 +14,22 @@ class Tile {
 
   /// total distance
   double get f => g + h;
-  bool get isBarrier => type == TileType.barrier;
-  bool get isFree => type == TileType.free;
+  bool get isBarrier => point is BarrierPoint;
+  bool get isFree => point is WeightedPoint;
+  bool get isStop => point is StopPoint;
 
-  Tile(this.position, this.neighbors,
-      {this.parent, this.type = TileType.free, this.weight = 1});
+  Tile(this.point, this.neighbors,
+      {this.parent});
 
   @override
   bool operator ==(covariant Tile other) {
     if (identical(this, other)) return true;
 
-    return other.position == position;
+    return other.point == point;
   }
 
   @override
   int get hashCode {
-    return position.hashCode ^ type.hashCode;
+    return point.hashCode ^ point.hashCode;
   }
 }

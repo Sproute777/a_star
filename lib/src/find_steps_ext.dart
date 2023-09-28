@@ -14,9 +14,9 @@ extension FindStepsExt on AStar {
 
     final List<Tile> currentArea = [...startTile.neighbors];
     if (currentArea.isEmpty) return totalArea.toPoints();
-    for (var element in startTile.neighbors) {
+    for (final Tile element in startTile.neighbors) {
       element.parent = startTile;
-      element.g = element.weight + startTile.weight;
+      element.g = element.point.weight + startTile.point.weight;
     }
     for (var i = 1; i < steps + 2; i++) {
       if (currentArea.isEmpty) continue;
@@ -27,7 +27,7 @@ extension FindStepsExt on AStar {
             if (totalArea.contains(n)) continue;
             if (n.parent == null) {
               n.parent = currentTile;
-              n.g = n.weight + currentTile.g;
+              n.g = n.point.weight + currentTile.g;
             }
             waitArea.add(n);
           }
